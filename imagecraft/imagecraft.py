@@ -8,7 +8,9 @@ from warnings import warn
 
 # Third-party libraries
 from PIL import Image, ImageOps
-from clevercss.consts import COLORS
+
+# This module
+from named_colors import COLORS
 
 
 class ImageGenerator(object):
@@ -171,6 +173,10 @@ class ImageGenerator(object):
         # Handles named colors; requires recursion (e.g. "red")
         elif colorval in COLORS.keys():
             return self._rgbcolor(named_colors.get(colorval))
+
+        # Handles color tuples; no changes are required, just return it
+        elif isinstance(colorval, tuple) and len(colorval) == 3:
+            return colorval
 
         # Handles transparent colors; this means do not colorize the image
         elif colorval in ['transparent', None]:

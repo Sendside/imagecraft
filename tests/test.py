@@ -42,6 +42,18 @@ NAMED_COLORS = {
     'transparent': 'transparent',
 }
 
+RGBTUP_COLORS = {
+    'red': (255,0,0),
+    'yellow': (255,255,0),
+    'green': (0,110,0),
+    'blue': (0,0,220),
+    'orange': (256,96,0),
+    'purple': (164,00,204),
+    'white': (255,255,255),
+    'black': (0,0,0),
+    'transparent': None,
+}
+
 class GeneratorTest(ImageGenerator):
     """ImageGenerator subclass for running tests."""
     _default_source_path = os.path.join(os.path.dirname(__file__), 'source')
@@ -131,4 +143,5 @@ def main():
 
 
 if __name__ == "__main__":
+    # Executes all tests when called directly from the command prompt.
     main()

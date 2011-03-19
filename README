@@ -1,0 +1,138 @@
+
+What is it?
+-----------
+
+Imagecraft lets you sandwich images together to create a final graphic. This is
+particularly useful for doing "just-in-time" skin customizations for web
+applications, particularly for branding purposes.
+
+What do I need?
+---------------
+
+Python, obviously. You'll also need PIL (the Python Imaging Library) to read
+and manipulate the source images to create the desired output. You'll also
+need to get your hands dirty and write a little Python to explain how to 
+generate your output images.
+
+This application isn't designed for standalone execution today -- so you'll 
+either have to write a simple implementation of that yourself, or more likely, 
+integrate into some existing software.
+
+Finally, although it is not at all required for correct operation, usefulness
+will be dramatically improved if your colours are being defined somewhere 
+else entirely and simply being passed as a dictionary from your application.
+This is a very convenient and powerful way of generating images, as the same
+color variables that populate your CSS can be used to generate images used
+as well.
+
+How does it work?
+-----------------
+
+It takes a set of images you provide and combines them together in order
+according to a small bit of programming, optionally colorizing each layer as
+it is processed.
+
+A typical use case might be creating a gradient from a dark colour to a
+lighter colour. Let's see how we would achieve that by walking through the
+steps.
+
+1. Create some source images
+
+All the source images for a single destination graphic must be the same size
+or else you'll run into problems. You may wish to create a template rectangle
+for your output image and place it on the "ruler" layer, or use a new layer
+for each layer to composite in bitmap-based graphic software.
+
+Each layer can contain effectively two kinds of data:
+
+* Black pixels with varying levels of alpha-transparency/opacity, which are
+  designed to be colorized with a specific colour at generation time, OR
+
+* RGB pixels with varying levels of alpha-transparency/opacity, which will
+  be sandwiched into the final image but whose colour will not be modified
+
+For this case, we want to define one solid black rectangle to assign to the 
+darker of the two colours, and another black rectangle that fades from black
+to transparent to assign the lighter colour. When you blend the two together,
+you will see a smooth transition from the light colour to the darker one
+behind it.
+
+Don't use colours besides black for your image unless you know what you're 
+doing; it will produce a tint of the generated colour when you build it which
+is probably not what you're after. For now, just stick with solid black and
+transparency.
+
+I also strongly recommend always working with PNG to preserve image quality and
+alpha-transparency information.
+
+2. Write a subclass of the ImageGenerator class
+
+The ImageGenerator class is set up in such a way that you just need to 
+subclass it and provide a few constants that serve as instructions on what to 
+build. 
+
+Our example code might look like this:
+
+from imagecraft import ImageGenerator
+
+class MyGradient(ImageGenerator):
+    """Creates a gradient from dark to light"""
+    image_format = "PNG"
+    output_filename = "my_gradient.png"
+    _default_input_path = "/path/to/my/source/images"
+    layers = (
+        {'dark_color': 'solid_rectangle.png'},
+        {'light_color': 'gradient_rectangle.png'},
+    )
+
+3. Write a name-to-value dictionary for colours
+
+The whole point of the excercise is that you are using variable names to
+represent the colour that will be applied to each layer -- not a literal color
+value itself; otherwise the reusability of the code is dramatically reduced. 
+You do this by providing a dictionary of named colors to the values they should
+use, and pass that to the constructor of your class when you want to render
+the final product out.
+
+If our example assumed we wanted to use dark and light blues for our 
+gradient, our dictionary might look like this:
+
+color_dict = {
+    'dark_color': '#227',
+    'light_color': '#77A',
+}
+
+The format is simple: you create a dictionary-like object where each key is
+the variable name for the colour, and each corresponding value is the RGB color
+you'd like to use. RGB colors can be in the following formats:
+
+* 12-bit hexadecimal RGB (e.g. "#F00")
+* 24-bit hexadecimal RGB (e.g. "#FF0000")
+* CSS named colors (e.g. "red")
+* CSS RGB integer triplet (e.g. "rgb(255, 0, 0)")
+* RGB integer triplet as a tuple of integers (e.g. (255, 0, 0) )
+
+There are also two special values that can be passed for colors:
+
+* CSS transparency string (e.g. "transparent")
+* The Python null object, None
+
+In the latter two cases, the images will not be colorized at all, but will 
+still be composited according to their alpha transparency information. This
+is helpful for combining rich-color images with other colourized layers. 
+
+4. Create an instance of your Generator subclass and call the render method
+
+Now that we have MyGradient defined (our instruction set) and color_dict (the
+colours we wish to apply for this round of generation) we want to output the
+result. We're also going to provide an explicit path where we want the output
+to go.
+
+output_path = '/tmp'
+MyGradient(color_dict, output_path=output_path).render()
+
+That's it. Your output file will now be at '/tmp/my_gradient.png'.
+
+If you want to see a few more examples, look in the tests directory. You can
+execute the tests to see what the generated output looks like.
+
