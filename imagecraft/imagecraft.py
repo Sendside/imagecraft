@@ -198,7 +198,7 @@ class ImageGenerator(object):
             split_channels = img.split()
             if len(split_channels) == 2: # Image is greyscale + alpha
                 alpha = split_channels[1]
-            elif len(split_channels == 4): # Image is RGB + A
+            elif len(split_channels) == 4: # Image is RGB + A
                 alpha = split_channels[3]
             else: # No alpha channel present
                 alpha = None
@@ -226,11 +226,17 @@ class ImageGenerator(object):
                 baselayer = bands_comb
             else:
                 if not alpha:
-                    warn("Layer %s has no alpha channel, which completely " \
-                            "obscures previous layers.")
-                    
-                # Paste this image over the previous layer
-                baselayer.paste(bands_comb, (0,0))
+                    warn("Non-background layer %s has no alpha channel, " \
+                        "which obscures all previous layers.")
+                    baselayer = bands_comb
+                else:
+
+                    mask = Image.merge("L", (alpha,))
+                    baselayer.paste(bands_comb, (0, 0), mask)
+
+                    # Composite this image over the previous layer
+                    #baselayer = Image.composite(baselayer, bands_comb, solid)
+
 
         # Attempt to write the image out to disk.
         self._write_to_file(baselayer)
