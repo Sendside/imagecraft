@@ -15,6 +15,7 @@ RGB24_COLORS = {
     'purple': '#9900BB',
     'white': '#FFFFFF',
     'black': '#000000',
+    'transparent': None,
 }
 
 RGB12_COLORS = {
@@ -26,6 +27,7 @@ RGB12_COLORS = {
     'purple': '#90B',
     'white': '#FFF',
     'black': '#000',
+    'transparent': None,
 }
 
 NAMED_COLORS = {
@@ -37,6 +39,7 @@ NAMED_COLORS = {
     'purple': 'purple',
     'white': 'white',
     'black': 'black',
+    'transparent': 'transparent',
 }
 
 class GeneratorTest(ImageGenerator):
@@ -105,10 +108,25 @@ class AlphaStarTest(GeneratorTest):
     )
 
 
+class OriginalColorTest(GeneratorTest):
+    """Superimposes an unmodified alpha-transparent RGB color wheel over a
+    colored background. The colour wheel collours should be preserved (not
+    colorized)."""
+    output_filename = "original_color_test.png"
+    layers = (
+        {'black': 'rgb_solid.png'},
+        {'red': 'rgba_grad_ne.png'},
+        {'green': 'rgba_grad_nw.png'},
+        {'blue': 'rgba_grad_sw.png'},
+        {'white': 'rgba_grad_se.png'},
+        {'transparent': 'rgba_rgb_wheel.png'},
+    )
+
+
 def main():
     """Runs some stupid tests"""
     for test in (SingleGradientTest, DualGradientTest, QuadGradientTest,
-                 SolidStarTest, AlphaStarTest):
+                 SolidStarTest, AlphaStarTest, OriginalColorTest):
         test(RGB24_COLORS).render()
 
 

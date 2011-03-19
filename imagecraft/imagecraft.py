@@ -127,7 +127,7 @@ class ImageGenerator(object):
         colortup = (0,0,0) # Default value to start with
 
         # Handles hex triplets (most common case)
-        if colorval.find('#') is 0:
+        if hasattr(colorval, 'find') and colorval.find('#') is 0:
 
             # 24-bit hexadecimal colors (e.g. #FF0000)
             if len(colorval) == 7:
@@ -146,7 +146,7 @@ class ImageGenerator(object):
                 )
 
         # Handles an RGB triplet (e.g. rgb(255, 0, 0))
-        elif colorval.lower().find('rgb') is 0:
+        elif hasattr(colorval, 'find') and colorval.lower().find('rgb') is 0:
             colorval = colorval.replace('rgb', '').replace('(', '')\
                 .replace(')', '')
 
@@ -171,7 +171,11 @@ class ImageGenerator(object):
         # Handles named colors; requires recursion (e.g. "red")
         elif colorval in COLORS.keys():
             return self._rgbcolor(named_colors.get(colorval))
-        
+
+        # Handles transparent colors; this means do not colorize the image
+        elif colorval in ['transparent', None]:
+            return None
+
         # Unknown color format; throw an error
         else:
             raise ValueError, "I don't know how to handle colors in format %s" \
@@ -203,15 +207,22 @@ class ImageGenerator(object):
             else: # No alpha channel present
                 alpha = None
 
-            # Convert the image to greyscale in case it isn't already.
-            greyscale_img = ImageOps.grayscale(img)
+            # Colorize image if a color is present
+            if color is not None:
+                # Convert the image to greyscale in case it isn't already.
+                greyscale_img = ImageOps.grayscale(img)
 
-            # Colorize the image with `color` for black and `#FFF` for white
-            white = (255, 255, 255)
-            colorized = ImageOps.colorize(greyscale_img, color, white)
+                # Colorize the image with `color` for black and `#FFF` for white
+                white = (255, 255, 255)
+                colorized = ImageOps.colorize(greyscale_img, color, white)
 
-            # Split the colorized image into component channels
-            bands_rgb = colorized.split()
+                # Split the colorized image into component channels
+                bands_rgb = colorized.split()
+
+            # If no color is present, use the image as is
+            else:
+                bands_rgb = (split_channels[0], split_channels[1],
+                             split_channels[2])
 
             # Create a new image comprised of the component channels + alpha
             if alpha:
