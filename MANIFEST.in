@@ -1,0 +1,4 @@
+include README
+include MANIFEST.in
+include-recursive imagecraft/source_images/*
+include imagecraft/output_images
