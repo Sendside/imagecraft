@@ -234,10 +234,6 @@ class ImageGenerator(object):
                     mask = Image.merge("L", (alpha,))
                     baselayer.paste(bands_comb, (0, 0), mask)
 
-                    # Composite this image over the previous layer
-                    #baselayer = Image.composite(baselayer, bands_comb, solid)
-
-
         # Attempt to write the image out to disk.
         self._write_to_file(baselayer)
         
