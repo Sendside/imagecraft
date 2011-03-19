@@ -69,11 +69,12 @@ class DualGradientTest(GeneratorTest):
 
 class QuadGradientTest(GeneratorTest):
     """Overlays two differently-colored image gradients. Should produce a
-    square with solid white at the bottom right, blue at the bottom left,
-    green at the top left and red at the top right."""
+    square with white at the bottom right, blue at the bottom left,
+    green at the top left and red at the top right. The center should be
+    nearly transparent."""
     output_filename = "quad_gradient_test.png"
     layers = (
-        {'red': 'rgb_solid.png'},
+        {'red': 'rgba_grad_ne.png'},
         {'green': 'rgba_grad_nw.png'},
         {'blue': 'rgba_grad_sw.png'},
         {'white': 'rgba_grad_se.png'},
@@ -90,13 +91,25 @@ class SolidStarTest(GeneratorTest):
     )
 
 
+class AlphaStarTest(GeneratorTest):
+    """Creates a star over an alpha-transparent gradient background. Should
+    produce a purple star over a yellow-and-orange alpha-transparent background
+    """
+    output_filename = "alpha_star_test.png"
+    layers = (
+        {'orange': 'rgba_grad_ne.png'},
+        {'yellow': 'rgba_grad_se.png'},
+        {'orange': 'rgba_grad_sw.png'},
+        {'yellow': 'rgba_grad_nw.png'},
+        {'purple': 'rgba_star.png'},
+    )
+
+
 def main():
     """Runs some stupid tests"""
     for test in (SingleGradientTest, DualGradientTest, QuadGradientTest,
-                 SolidStarTest):
+                 SolidStarTest, AlphaStarTest):
         test(RGB24_COLORS).render()
-
-
 
 
 if __name__ == "__main__":
