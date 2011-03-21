@@ -222,12 +222,6 @@ class ImageGenerator(object):
             else: # No alpha channel present
                 alpha = None
 
-            if alpha:
-                if not previous_alpha:
-                    previous_alpha = alpha
-                else:
-                    previous_alpha = ImageChops.lighter(previous_alpha, alpha)
-
             # Colorize image if a color is present
             if color is not None:
 
@@ -242,7 +236,13 @@ class ImageGenerator(object):
                 bands_rgb = colorized.split()
 
                 if alpha:
-                    img_mask = Image.eval(alpha, lambda p: 255 * (int(p != 0)))
+                    # Create a mask that is solid except where 100% transparent
+                    img_mask = Image.eval(alpha, lambda v: 255 * int(v != 0))
+
+                    # "undo" the previous step when the alpha channel overlaps
+                    # an area known to be solid on the previous layer.
+                    img_mask = Image.composite(alpha, img_mask, previous_alpha)
+
                 else:
                     img_mask = Image.new("L", img.size, 0)
 
@@ -252,11 +252,22 @@ class ImageGenerator(object):
             
                 #baselayer = Image.new("RGB", img.size, (0,0,0))
 
+            elif color is None:
+                baselayer = Image.composite(img, baselayer, img)
+                bands_rgb = (split_channels[0], split_channels[1], split_channels[2])
+
 
             # If no color is present, use the image as is
             else:
                 bands_rgb = (split_channels[0], split_channels[1],
                              split_channels[2])
+
+            # Combine the alpha channel with the previous one.
+            if alpha:
+                if not previous_alpha:
+                    previous_alpha = alpha
+                else:
+                    previous_alpha = ImageChops.lighter(previous_alpha, alpha)
 
             # Create a new image comprised of the component channels + alpha
             if False and alpha: # and layeridx is not 0:
