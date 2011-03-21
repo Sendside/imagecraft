@@ -209,18 +209,32 @@ class ImageGenerator(object):
             img = Image.open(os.path.join(self.source_path, filename))
             img.load() # Explicitly load the image to prevent errors
 
-            # Always start with black.
+            # Start with a solid black image.
             if not baselayer:
                 baselayer = Image.new("RGB", img.size, (0,0,0))
 
-            # Grab the alpha channel
+            # Split the image into component channels
             split_channels = img.split()
-            if len(split_channels) == 2: # Image is greyscale + alpha
+            if len(split_channels) == 2: # Image is Greyscale + Alpha
                 alpha = split_channels[1]
-            elif len(split_channels) == 4: # Image is RGB + A
+            elif len(split_channels) == 4: # Image is RGB + Alpha
                 alpha = split_channels[3]
             else: # No alpha channel present
                 alpha = None
+                if layeridx > 0:
+                    warn("Non-background layer `%s` has no alpha channel, " \
+                        "which obscures all previous layers" % filename)
+                    baselayer = img
+
+            # Combine the alpha channel with the previous one for the next pass
+            if alpha:
+                if not previous_alpha: # No previous_alpha exists; create one
+                    previous_alpha = alpha
+                else:
+                    previous_alpha = ImageChops.lighter(previous_alpha, alpha)
+            if previous_alpha:
+                previous_alpha.save("/tmp/test/%s_previousalpha.png" % layeridx, "PNG")
+
 
             # Colorize image if a color is present
             if color is not None:
@@ -232,84 +246,58 @@ class ImageGenerator(object):
                 white = (255, 255, 255)
                 colorized = ImageOps.colorize(greyscale_img, color, white)
 
-                # Split the colorized image into component channels
-                bands_rgb = colorized.split()
-
                 if alpha:
                     # Create a mask that is solid except where 100% transparent
                     img_mask = Image.eval(alpha, lambda v: 255 * int(v != 0))
+                    
+                    img_mask.save("/tmp/test/%s_initial_mask.png" % layeridx, "PNG")
 
                     # "undo" the previous step when the alpha channel overlaps
                     # an area known to be solid on the previous layer.
                     img_mask = Image.composite(alpha, img_mask, previous_alpha)
 
+                    # Argh. Try screening.
+                    img_mask = ImageChops.screen(img_mask, previous_alpha)
+
+                    img_mask.save("/tmp/test/%s_final_mask.png" % layeridx, "PNG")
+                    
                 else:
+                    # No alpha; use a solid black rectangle as the compositor
                     img_mask = Image.new("L", img.size, 0)
 
-                img_mask.save('/tmp/mask_for_layer_%s' % layeridx, 'PNG')
 
-                baselayer = Image.composite(colorized, baselayer, img_mask)
-            
-                #baselayer = Image.new("RGB", img.size, (0,0,0))
+                # ********** debugging ***********
+                if alpha:
+                    alpha.save("/tmp/test/%s_%s_alpha.png" % (filename, layeridx), "PNG")
 
-            elif color is None:
+
+                colorized.save("/tmp/test/%s_colorized.png" % layeridx, "PNG")
+                # ********** debugging ***********
+
+                #baselayer = Image.composite(colorized, baselayer, img_mask)
+                baselayer = Image.composite(colorized, baselayer, img)
+
+            else:
                 baselayer = Image.composite(img, baselayer, img)
-                bands_rgb = (split_channels[0], split_channels[1], split_channels[2])
+
+            #baselayer.putalpha(previous_alpha)
+
+            # ********** debugging ***********
+            baselayer.save("/tmp/test/%s_baselayer.png" % layeridx, "PNG")
+            # ********** debugging ***********
 
 
-            # If no color is present, use the image as is
-            else:
-                bands_rgb = (split_channels[0], split_channels[1],
-                             split_channels[2])
-
-            # Combine the alpha channel with the previous one.
-            if alpha:
-                if not previous_alpha:
-                    previous_alpha = alpha
-                else:
-                    previous_alpha = ImageChops.lighter(previous_alpha, alpha)
-
-            # Create a new image comprised of the component channels + alpha
-            if False and alpha: # and layeridx is not 0:
-                pass
-                #bands_comb = Image.merge("RGBA", (bands_rgb[0], bands_rgb[1],
-                #                                        bands_rgb[2], alpha))
-            else:
-                bands_comb = Image.merge("RGB", (bands_rgb[0], bands_rgb[1],
-                                                        bands_rgb[2]))
-
-            #else:
-            if True:
-                if not alpha:
-                    warn("Non-background layer %s has no alpha channel, " \
-                        "which obscures all previous layers.")
-                    baselayer = bands_comb
-                else:
-
-                    #bands_rgb = Image.merge("RGB", bands_rgb)
-
-                    #bands_rgb.save("/tmp/layer_%s_bandsrgb.png" % layeridx, "PNG")
-                    #alpha.save("/tmp/layer_%s_alpha.png" % layeridx, "PNG")
-                    #previous_alpha.save("/tmp/layer_%s_previousalpha.png" % layeridx, "PNG")
-                    
-                    #baselayer = Image.merge("RGB", baselayer.split()[0:3])
-                    #baselayer.paste(bands_rgb, None, alpha)
-
-                    #s = baselayer.split()
-                    #baselayer = Image.merge("RGBA", (s[0], s[1], s[2], previous_alpha))
-
-                    pass
-
-
-        baselayer.save("/tmp/baselayer.png", "PNG")
-        previous_alpha.save("/tmp/previousalpha.png", "PNG")
-
-        # Apply mask now.
+        # Apply our "total mask" now, just before saving.
         baselayer.putalpha(previous_alpha)
 
         # Attempt to write the image out to disk.
         if baselayer:
             self._write_to_file(baselayer)
+
+            # ********** debugging ***********
+            baselayer.save("/tmp/test/%s" % self.output_filename, "PNG")
+            # ********** debugging ***********
+
         else:
             raise ValueError, "Nothing to write to disk"
         
