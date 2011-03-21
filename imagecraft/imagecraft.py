@@ -252,8 +252,7 @@ class ImageGenerator(object):
                         "which obscures all previous layers.")
                     baselayer = bands_comb
                 else:
-                    # Alpha needs to be heavily multipled to apply correctly (?)
-                    mask = alpha.point(lambda i: i * 100)
+                    mask = alpha
                     baselayer = Image.composite(bands_comb, baselayer, mask)
 
         # Attempt to write the image out to disk.
