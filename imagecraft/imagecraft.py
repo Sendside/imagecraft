@@ -7,7 +7,7 @@ import os
 from warnings import warn
 
 # Third-party libraries
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageChops
 
 # This module
 from named_colors import COLORS
@@ -109,8 +109,12 @@ class ImageGenerator(object):
                 else:
                     required_color = layer.keys()[0]
                     if required_color not in color_dict.keys():
-                        raise ValueError, "Required color %s not found in " \
-                            "color_dict" % (required_color,)
+                        if required_color is 'transparent':
+                            layer_img = layer.values()[0]
+                            colors_for_layers.append({None: layer_img})
+                        else:
+                            raise ValueError, "Required color %s not found in"\
+                                " color_dict" % (required_color,)
                     else:
                         # Success; map the color to the image
                         found_color = self._rgbcolor(color_dict.get( \
@@ -241,18 +245,22 @@ class ImageGenerator(object):
             if layeridx is 0:
                 # Store the base layer
                 baselayer = bands_comb
+
             else:
                 if not alpha:
                     warn("Non-background layer %s has no alpha channel, " \
                         "which obscures all previous layers.")
                     baselayer = bands_comb
                 else:
-
-                    mask = Image.merge("L", (alpha,))
-                    baselayer.paste(bands_comb, (0, 0), mask)
+                    # Alpha needs to be heavily multipled to apply correctly (?)
+                    mask = alpha.point(lambda i: i * 100)
+                    baselayer = Image.composite(bands_comb, baselayer, mask)
 
         # Attempt to write the image out to disk.
-        self._write_to_file(baselayer)
+        if baselayer:
+            self._write_to_file(baselayer)
+        else:
+            raise ValueError, "Nothing to write to disk"
         
         return 
 
