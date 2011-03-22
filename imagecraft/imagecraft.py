@@ -81,6 +81,7 @@ class ImageGenerator(object):
         self.colors_for_layers = self._map_colors_to_layers(color_dict)
         self.source_path = source_path or self._default_source_path
         self.output_path = output_path or self._default_output_path
+        self.matte_color = None
 
     def _map_colors_to_layers(self, color_dict):
         """
@@ -205,13 +206,11 @@ class ImageGenerator(object):
 
         for layeridx, layer in enumerate(self.colors_for_layers):
             color = layer.keys()[0]
+            if color and layeridx == 0:
+                self.matte_color = color
             filename = layer.values()[0]
             img = Image.open(os.path.join(self.source_path, filename))
             img.load() # Explicitly load the image to prevent errors
-
-            # Start with a solid black image.
-            if not baselayer:
-                baselayer = Image.new("RGB", img.size, (0,0,0))
 
             # Split the image into component channels
             split_channels = img.split()
@@ -224,17 +223,15 @@ class ImageGenerator(object):
                 if layeridx > 0:
                     warn("Non-background layer `%s` has no alpha channel, " \
                         "which obscures all previous layers" % filename)
-                    baselayer = img
-
+                else:
+                    previous_alpha = Image.new("L", img.size, 128)
+                    
             # Combine the alpha channel with the previous one for the next pass
             if alpha:
                 if not previous_alpha: # No previous_alpha exists; create one
                     previous_alpha = alpha
                 else:
-                    previous_alpha = ImageChops.lighter(previous_alpha, alpha)
-            if previous_alpha:
-                previous_alpha.save("/tmp/test/%s_previousalpha.png" % layeridx, "PNG")
-
+                    previous_alpha = ImageChops.screen(previous_alpha, alpha)
 
             # Colorize image if a color is present
             if color is not None:
@@ -242,66 +239,93 @@ class ImageGenerator(object):
                 # Convert the image to greyscale in case it isn't already.
                 greyscale_img = ImageOps.grayscale(img)
 
-                # Colorize the image with `color` for black and `#FFF` for white
+                # Colorize the image with `color` as black, and white as white
                 white = (255, 255, 255)
                 colorized = ImageOps.colorize(greyscale_img, color, white)
 
                 if alpha:
-                    # Create a mask that is solid except where 100% transparent
-                    img_mask = Image.eval(alpha, lambda v: 255 * int(v != 0))
-                    
-                    img_mask.save("/tmp/test/%s_initial_mask.png" % layeridx, "PNG")
+                    img_mask = alpha
+                    if baselayer:
+                        baselayer = Image.composite(colorized, baselayer,
+                                                    img_mask)
+                    else:
+                        #baselayer = Image.new("RGBA", img.size, (128, 128,
+                        #                                         128, 256))
+                        #colorized.putalpha(img_mask)
+                        #baselayer.paste(colorized)
+                        #baselayer = colorized
+                        
+                        baselayer = Image.new("RGB", img.size, color)
+                        baselayer.putalpha(img_mask)
+                        baselayer = self._remove_premultiplied_alpha(baselayer)
 
-                    # "undo" the previous step when the alpha channel overlaps
-                    # an area known to be solid on the previous layer.
-                    img_mask = Image.composite(alpha, img_mask, previous_alpha)
 
-                    # Argh. Try screening.
-                    img_mask = ImageChops.screen(img_mask, previous_alpha)
-
-                    img_mask.save("/tmp/test/%s_final_mask.png" % layeridx, "PNG")
-                    
                 else:
                     # No alpha; use a solid black rectangle as the compositor
-                    img_mask = Image.new("L", img.size, 0)
+                    baselayer = colorized
 
-
-                # ********** debugging ***********
-                if alpha:
-                    alpha.save("/tmp/test/%s_%s_alpha.png" % (filename, layeridx), "PNG")
-
-
-                colorized.save("/tmp/test/%s_colorized.png" % layeridx, "PNG")
-                # ********** debugging ***********
-
-                #baselayer = Image.composite(colorized, baselayer, img_mask)
-                baselayer = Image.composite(colorized, baselayer, img)
-
+            # Image is not colorized
             else:
-                baselayer = Image.composite(img, baselayer, img)
+                if alpha:
+                    # If it has an alpha channel, composite it
+                    baselayer = Image.composite(img, baselayer, img)
+                else:
+                    # No colorize, no alpha, just overwrite it
+                    baselayer = img
 
-            #baselayer.putalpha(previous_alpha)
-
-            # ********** debugging ***********
-            baselayer.save("/tmp/test/%s_baselayer.png" % layeridx, "PNG")
-            # ********** debugging ***********
-
-
-        # Apply our "total mask" now, just before saving.
-        baselayer.putalpha(previous_alpha)
+        # pre-multiplied alpha = slightly improved alpha-blended colours
+        if baselayer.mode == "RGBA" and self.matte_color is not None:
+            baselayer = self._apply_premultiplied_alpha(baselayer)
 
         # Attempt to write the image out to disk.
         if baselayer:
             self._write_to_file(baselayer)
-
-            # ********** debugging ***********
-            baselayer.save("/tmp/test/%s" % self.output_filename, "PNG")
-            # ********** debugging ***********
-
         else:
             raise ValueError, "Nothing to write to disk"
-        
-        return 
+
+        return
+
+    def _remove_premultiplied_alpha(self, pil_image):
+        """Returns an object with pre-multiplied alpha removed"""
+
+        if pil_image.mode != "RGBA":
+            raise ValueError("Cannot operate on alpha if not mode RGBA")
+
+        out = Image.new(pil_image.mode, pil_image.size, None)
+        o = out.load()
+        p = pil_image.load()
+        for x in range(pil_image.size[0]):
+            for y in range(pil_image.size[1]):
+                r,g,b,a = p[x, y] # Unpack range
+                r = (r * a + self.matte_color[0]) // 255
+                b = (b * a + self.matte_color[1]) // 255
+                g = (g * a + self.matte_color[2]) // 255
+                o[x, y] = (r,g,b,a)
+
+        # Restore image object
+        return out
+
+    def _apply_premultiplied_alpha(self, pil_image):
+        """Returns a PIL object with premultiplied alpha added"""
+        if pil_image.mode != "RGBA":
+            raise ValueError("Cannot operate on alpha if not mode RGBA")
+
+        out = Image.new(pil_image.mode, pil_image.size, None)
+        o = out.load()
+        p = pil_image.load()
+        for x in range(pil_image.size[0]):
+            for y in range(pil_image.size[1]):
+                r,g,b,a = p[x, y] # Unpack range
+
+                # This isn't perfect, but it's as close as I think I'll get
+                if a > 0:
+                    r = (r * (255 + a) // 2) // a
+                    g = (g * (255 + a) // 2) // a
+                    b = (b * (255 + a) // 2) // a
+                o[x, y] = (r,g,b,a)
+
+        # Restore image object
+        return out
 
     def _write_to_file(self, imageobj):
         """
