@@ -150,7 +150,9 @@ class ComplexGradientTest(GeneratorTest):
 
 
 class GradientStripe(GeneratorTest):
-    """Draws a couple gradients."""
+    """Draws a couple gradients. This caused some problems previously because
+    the black wouldn't render (matting issues). You should see white gradients
+    at the top and (subtle) black gradients at the bottom."""
     output_filename = "gradient_stripe.%s" % FILE_EXT
     layers = (
         {'white': 'gradstripe_top.png'},

@@ -206,8 +206,6 @@ class ImageGenerator(object):
 
         for layeridx, layer in enumerate(self.colors_for_layers):
             color = layer.keys()[0]
-            if color and layeridx == 0:
-                self.matte_color = color
             filename = layer.values()[0]
             img = Image.open(os.path.join(self.source_path, filename))
             img.load() # Explicitly load the image to prevent errors
@@ -245,6 +243,7 @@ class ImageGenerator(object):
 
                 if alpha:
                     img_mask = alpha
+
                     if baselayer:
                         baselayer = Image.composite(colorized, baselayer,
                                                     img_mask)
@@ -267,7 +266,7 @@ class ImageGenerator(object):
                     baselayer = img
 
         # pre-multiplied alpha = slightly improved alpha-blended colours
-        if baselayer.mode == "RGBA" and self.matte_color is not None:
+        if baselayer.mode == "RGBA":
             baselayer = self._apply_premultiplied_alpha(baselayer)
 
         # Attempt to write the image out to disk.
@@ -289,9 +288,9 @@ class ImageGenerator(object):
         for x in range(pil_image.size[0]):
             for y in range(pil_image.size[1]):
                 r,g,b,a = p[x, y] # Unpack range
-                r = (r * a + self.matte_color[0]) // 255
-                b = (b * a + self.matte_color[1]) // 255
-                g = (g * a + self.matte_color[2]) // 255
+                r = (r*a) // 255
+                b = (b*a) // 255
+                g = (g*a) // 255
                 o[x, y] = (r,g,b,a)
 
         return out
@@ -308,9 +307,9 @@ class ImageGenerator(object):
             for y in range(pil_image.size[1]):
                 r,g,b,a = p[x, y] # Unpack range
                 if a > 0:
-                    r = (r * (255 + a) // 2) // a
-                    g = (g * (255 + a) // 2) // a
-                    b = (b * (255 + a) // 2) // a
+                    r = (r*255 + a//2) // a
+                    g = (g*255 + a//2) // a
+                    b = (b*255 + a//2) // a
                 o[x, y] = (r,g,b,a)
 
         return out
