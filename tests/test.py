@@ -149,6 +149,15 @@ class ComplexGradientTest(GeneratorTest):
     )
 
 
+class GradientStripe(GeneratorTest):
+    """Draws a couple gradients."""
+    output_filename = "gradient_stripe.%s" % FILE_EXT
+    layers = (
+        {'white': 'gradstripe_top.png'},
+        {'black': 'gradstripe_bottom.png'},
+    )
+
+
 def main():
     """Runs some stupid tests"""
     global FILE_EXT
@@ -157,13 +166,17 @@ def main():
     FILE_FORMAT = 'PNG'
 
     c = RGB24_COLORS
-    for test in (SingleGradientTest, DualGradientTest, QuadGradientTest,
-                 SolidStarTest, AlphaStarTest, OriginalColorTest,
-                 ComplexGradientTest):
+    for test in (
+            SingleGradientTest,
+            DualGradientTest,
+            QuadGradientTest,
+            SolidStarTest,
+            AlphaStarTest,
+            OriginalColorTest,
+            ComplexGradientTest,
+            GradientStripe,
+            ):
         test(c).render()
-
-    #DualGradientTest(c).render()
-
 
 if __name__ == "__main__":
     # Executes all tests when called directly from the command prompt.
