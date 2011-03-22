@@ -253,7 +253,6 @@ class ImageGenerator(object):
                         baselayer.putalpha(img_mask)
                         baselayer = self._remove_premultiplied_alpha(baselayer)
 
-
                 else:
                     # No alpha; use a solid black rectangle as the compositor
                     baselayer = colorized
@@ -295,7 +294,6 @@ class ImageGenerator(object):
                 g = (g * a + self.matte_color[2]) // 255
                 o[x, y] = (r,g,b,a)
 
-        # Restore image object
         return out
 
     def _apply_premultiplied_alpha(self, pil_image):
@@ -309,15 +307,12 @@ class ImageGenerator(object):
         for x in range(pil_image.size[0]):
             for y in range(pil_image.size[1]):
                 r,g,b,a = p[x, y] # Unpack range
-
-                # This isn't perfect, but it's as close as I think I'll get
                 if a > 0:
                     r = (r * (255 + a) // 2) // a
                     g = (g * (255 + a) // 2) // a
                     b = (b * (255 + a) // 2) // a
                 o[x, y] = (r,g,b,a)
 
-        # Restore image object
         return out
 
     def _write_to_file(self, imageobj):

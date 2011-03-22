@@ -6,6 +6,9 @@ import os
 # This module
 from imagecraft import ImageGenerator
 
+FILE_EXT = "png"
+FILE_FORMAT = "PNG"
+
 RGB24_COLORS = {
     'red': '#FF0000',
     'yellow': '#FFFF00',
@@ -58,16 +61,16 @@ class GeneratorTest(ImageGenerator):
     """ImageGenerator subclass for running tests."""
     _default_source_path = os.path.join(os.path.dirname(__file__), 'source')
     _default_output_path = os.path.join(os.path.dirname(__file__), 'output')
-    image_format = 'PNG'
+    image_format = FILE_FORMAT
 
 
 class SingleGradientTest(GeneratorTest):
     """Creates a single image gradient. Should produce a square with solid
     red in the upper-left with a gradient toward transparent at the bottom
     right."""
-    output_filename = "single_gradient_test.png"
+    output_filename = "single_gradient_test.%s" % FILE_EXT
     layers = (
-        {'red': 'rgba_grad_ne.png'},
+        {'white': 'rgba_grad_ne.png'},
     )
 
 
@@ -75,10 +78,10 @@ class DualGradientTest(GeneratorTest):
     """Overlays two differently-colored image gradients. Should produce a
     square with solid green at the upper left blending into solid red at the
     bottom right."""
-    output_filename = "dual_gradient_test.png"
+    output_filename = "dual_gradient_test.%s" % FILE_EXT
     layers = (
-        {'red': 'rgb_solid.png'},
-        {'green': 'rgba_grad_nw.png'},
+        {'red': 'rgba_grad_ne.png'},
+        {'white': 'rgba_grad_nw.png'},
     )
 
 
@@ -87,7 +90,7 @@ class QuadGradientTest(GeneratorTest):
     square with white at the bottom right, blue at the bottom left,
     green at the top left and red at the top right. The center should be
     nearly transparent."""
-    output_filename = "quad_gradient_test.png"
+    output_filename = "quad_gradient_test.%s" % FILE_EXT
     layers = (
         {'red': 'rgba_grad_ne.png'},
         {'green': 'rgba_grad_nw.png'},
@@ -99,7 +102,7 @@ class QuadGradientTest(GeneratorTest):
 class SolidStarTest(GeneratorTest):
     """Creates a star over a solid background color. Should produce a yellow
     star over a red background."""
-    output_filename = "solid_star_test.png"
+    output_filename = "solid_star_test.%s" % FILE_EXT
     layers = (
         {'red': 'rgb_solid.png'},
         {'yellow': 'rgba_star.png'},
@@ -110,7 +113,7 @@ class AlphaStarTest(GeneratorTest):
     """Creates a star over an alpha-transparent gradient background. Should
     produce a purple star over a yellow-and-orange alpha-transparent background
     """
-    output_filename = "alpha_star_test.png"
+    output_filename = "alpha_star_test.%s" % FILE_EXT
     layers = (
         {'orange': 'rgba_grad_ne.png'},
         {'yellow': 'rgba_grad_se.png'},
@@ -124,7 +127,7 @@ class OriginalColorTest(GeneratorTest):
     """Superimposes an unmodified alpha-transparent RGB color wheel over a
     colored background. The colour wheel collours should be preserved (not
     colorized)."""
-    output_filename = "original_color_test.png"
+    output_filename = "original_color_test.%s" % FILE_EXT
     layers = (
         {'black': 'rgb_solid.png'},
         {'red': 'rgba_grad_ne.png'},
@@ -135,11 +138,31 @@ class OriginalColorTest(GeneratorTest):
     )
 
 
+class ComplexGradientTest(GeneratorTest):
+    """Draws two gradients; one over a transparency and the other over a
+    solid-colored box."""
+    output_filename = "complex_gradient_test.%s" % FILE_EXT
+    layers = (
+        {'red': 'rgba_solid_top.png'},
+        {'blue': 'rgba_gradalpha.png'},
+        {'yellow': 'rgba_grad_star.png'},
+    )
+
+
 def main():
     """Runs some stupid tests"""
+    global FILE_EXT
+    global FILE_FORMAT
+    FILE_EXT = 'png'
+    FILE_FORMAT = 'PNG'
+
+    c = RGB24_COLORS
     for test in (SingleGradientTest, DualGradientTest, QuadGradientTest,
-                 SolidStarTest, AlphaStarTest, OriginalColorTest):
-        test(RGB24_COLORS).render()
+                 SolidStarTest, AlphaStarTest, OriginalColorTest,
+                 ComplexGradientTest):
+        test(c).render()
+
+    #DualGradientTest(c).render()
 
 
 if __name__ == "__main__":
