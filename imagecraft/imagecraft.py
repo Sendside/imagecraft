@@ -249,13 +249,7 @@ class ImageGenerator(object):
                         baselayer = Image.composite(colorized, baselayer,
                                                     img_mask)
                     else:
-                        #baselayer = Image.new("RGBA", img.size, (128, 128,
-                        #                                         128, 256))
-                        #colorized.putalpha(img_mask)
-                        #baselayer.paste(colorized)
-                        #baselayer = colorized
-                        
-                        baselayer = Image.new("RGB", img.size, color)
+                        baselayer = colorized
                         baselayer.putalpha(img_mask)
                         baselayer = self._remove_premultiplied_alpha(baselayer)
 
@@ -287,7 +281,6 @@ class ImageGenerator(object):
 
     def _remove_premultiplied_alpha(self, pil_image):
         """Returns an object with pre-multiplied alpha removed"""
-
         if pil_image.mode != "RGBA":
             raise ValueError("Cannot operate on alpha if not mode RGBA")
 
