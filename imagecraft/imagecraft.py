@@ -7,7 +7,13 @@ import os
 from warnings import warn
 
 # Third-party libraries
-from PIL import Image, ImageOps, ImageChops
+try:
+    from PIL import Image, ImageOps, ImageChops
+except ImportError:
+    try:
+        import Image, ImageOps, ImageChops
+    except ImportError:
+        raise ImportError("Could not locate Python Imaging Library (PIL)")
 
 # This module
 from named_colors import COLORS
