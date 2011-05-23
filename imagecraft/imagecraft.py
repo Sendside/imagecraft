@@ -267,6 +267,7 @@ class ImageGenerator(object):
                 if alpha:
                     # If it has an alpha channel, composite it
                     baselayer = Image.composite(img, baselayer, img)
+                    baselayer = self._remove_premultiplied_alpha(baselayer)
                 else:
                     # No colorize, no alpha, just overwrite it
                     baselayer = img
