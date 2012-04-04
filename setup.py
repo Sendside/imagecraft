@@ -42,5 +42,5 @@ setup(
     url = 'https://github.com/isolationism/imagecraft',
     classifiers = [],
     packages = find_packages('imagecraft'),
-    install_requires = ['pil'],
+    install_requires = ['Pillow'],
 )
