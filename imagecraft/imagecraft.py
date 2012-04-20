@@ -106,28 +106,17 @@ class ImageGenerator(object):
 
         colors_for_layers = []
 
-        for layer in self.layers:
-            if not hasattr(layer, 'keys'):
-                raise TypeError, "Each layer must be represented"
-            else:
-                if len(layer.keys()) != 1:
-                    raise ValueError, "Each layer must have exactly one key-" \
-                        "value pair"
+        for required_color, layer_img in self.layers:
+            if required_color not in color_dict.keys():
+                if required_color is 'transparent':
+                    colors_for_layers.append({None: layer_img})
                 else:
-                    required_color = layer.keys()[0]
-                    if required_color not in color_dict.keys():
-                        if required_color is 'transparent':
-                            layer_img = layer.values()[0]
-                            colors_for_layers.append({None: layer_img})
-                        else:
-                            raise ValueError, "Required color %s not found in"\
-                                " color_dict" % (required_color,)
-                    else:
-                        # Success; map the color to the image
-                        found_color = self._rgbcolor(color_dict.get( \
-                            required_color))
-                        layer_img = layer.values()[0]
-                        colors_for_layers.append({found_color: layer_img})
+                    raise ValueError, "Required color %s not found in " \
+                                      "color_dict" % (required_color,)
+            else:
+                # Success; map the color to the image
+                found_color = self._rgbcolor(color_dict.get(required_color))
+                colors_for_layers.append({found_color: layer_img})
 
         return tuple(colors_for_layers)
 
